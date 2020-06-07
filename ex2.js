@@ -9,54 +9,62 @@ const graph = {
   7: { 3: 6, 4: 9, 5: 5 },
 };
 
-// 0: 0
-// 1: 2
-// 2: 15
-// 3: 10
-// 4: 3
-// 5: 11
-// 6: 8
-// 7: 12
+function getLowestCostKnownNode(costs, processedNodes) {
+  const knownNodes = Object.keys(costs);
+
+  return knownNodes.reduce((lowest, node) => {
+    if (!processedNodes.includes(node)) {
+      if (lowest === null || costs[node] < costs[lowest]) {
+        lowest = node;
+      }
+    }
+    return lowest;
+  }, null);
+}
 
 function shortestPath(graph, start, target) {
-  let cost = 0;
-  let path = [start];
+  if (start === +target) return { cost: 0, path: [start] };
 
-  while (!path.includes(target)) {
-    const currentNode = graph[path[path.length - 1]];
+  const calculatedCosts = Object.assign({ [target]: Infinity }, graph[start]);
+  const parents = { [target]: null };
+  Object.keys(graph[start]).forEach((n) => {
+    parents[n] = start;
+  });
+  const processedNodes = [];
 
-    const neighbors = Object.entries(currentNode)
-      .map(([node, edgeValue]) => ({ node: +node, edgeValue }));
-    
-    const validNeighbors = neighbors.filter((n) => !path.includes(n.node));
+  let node = getLowestCostKnownNode(calculatedCosts, processedNodes);
+  while (node) {
+    const cost = calculatedCosts[node];
+    const neighbors = graph[node];
 
-    let nearestNeighbor = null;
-    let finished = false;
-    for (let i = 0; i < validNeighbors.length; i++) {
-      if (validNeighbors[i].node === target) {
-        cost += validNeighbors[i].edgeValue;
-        path.push(validNeighbors[i].node);
-        finished = true;
-        break;
+    Object.entries(neighbors).forEach(([n, value]) => {
+      const newCost = cost + value;
+      if (!calculatedCosts[n]) {
+        calculatedCosts[n] = newCost;
+        parents[n] = node;
       }
-
-      if (!nearestNeighbor) {
-        nearestNeighbor = validNeighbors[i];
-      } else if (nearestNeighbor.edgeValue > validNeighbors[i].edgeValue) {
-        nearestNeighbor = validNeighbors[i];
+      if (calculatedCosts[n] > newCost) {
+        calculatedCosts[n] = newCost;
+        parents[n] = node;
       }
-    }
+    });
 
-    if (!finished) {
-      cost += nearestNeighbor.edgeValue;
-      path.push(nearestNeighbor.node);
-    }
+    processedNodes.push(node);
+    node = getLowestCostKnownNode(calculatedCosts, processedNodes);
   }
 
-  return { cost, path };
+  const path = [target];
+  let parent = parents[target];
+  while (parent !== start) {
+    path.unshift(parent);
+    parent = parents[parent];
+  }
+  path.unshift(start);
+
+  return { cost: calculatedCosts[target], path };
 }
 
 Object.keys(graph).forEach((node) => {
-  const { cost, path } = shortestPath(graph, 0, +node);
-  console.log(`Vertex, Cost, Path -> ${node}, ${cost}, ${path.join('-')}`)
-})
+  const { cost, path } = shortestPath(graph, 0, node);
+  console.log(`Vertex, Cost, Path -> ${node}, ${cost}, ${path.join('-')}`);
+});
